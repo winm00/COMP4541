@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoLuck Lottery</title>
+    <!-- Import ethers.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        /* Custom color scheme */
+        :root {
+            --primary: #6c63ff;
+            --primary-dark: #5a52d9;
+            --secondary: #ffd166;
+            --success: #06d6a0;
+            --error: #ef476f;
+            --warning: #ffc43d;
+            --text: #2b2d42;
+            --background: #f1f3f8;
+            --card: #ffffff;
+            --accent: #9381ff;
+        }
+
+        /* Base styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .app-container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        /* Header with custom logo */
+        .app-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-top: 20px;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+        }
+
+        .logo span {
+            color: var(--secondary);
+        }
+
+        .tagline {
+            font-style: italic;
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        /* Main card with custom design */
+        .lottery-card {
+            background-color: var(--card);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+            border-top: 5px solid var(--primary);
+        }
+
+        .info-box {
+            background-color: rgba(108, 99, 255, 0.08);
+            border-left: 4px solid var(--primary);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        /* Custom buttons */
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 12px 18px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            margin: 8px 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 99, 255, 0.4);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary);
+            color: var(--text);
+        }
+
+        .btn-secondary:hover {
+            background-color: #ebc254;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 209, 102, 0.4);
+        }
+
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Cool icons for buttons */
+        .icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .wallet-icon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M21 4H3a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-1 12h-3v-2h3v2z'/%3E%3C/svg%3E");
+        }
+
+        .enter-icon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'/%3E%3C/svg%3E");
+        }
+
+        .winner-icon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232b2d42'%3E%3Cpath d='M12 2L8.5 8.5 2 9.8l5 4.9-1.2 6.9 6.2-3.2 6.2 3.2-1.2-6.9 5-4.9-6.5-1.3z'/%3E%3C/svg%3E");
+        }
+
+        /* Status styles */
+        .status {
+            padding: 12px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-weight: 500;
+            position: relative;
+            padding-left: 35px;
+        }
+
+        .status::before {
+            content: "";
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        .success {
+            background-color: rgba(6, 214, 160, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .success::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2306d6a0'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z'/%3E%3C/svg%3E");
+        }
+
+        .error {
+            background-color: rgba(239, 71, 111, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .error::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ef476f'%3E%3Cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z'/%3E%3C/svg%3E");
+        }
+
+        .warning {
+            background-color: rgba(255, 196, 61, 0.1);
+            color: #b38a28;
+            border: 1px solid var(--warning);
+        }
+
+        .warning::before {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ffc43d'%3E%3Cpath d='M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z'/%3E%3C/svg%3E");
+        }
+
+        /* Stats display */
+        .stats-container {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            gap: 15px;
+        }
+
+        .stat-box {
+            flex: 1;
+            background: rgb(108,99,255);
+            background: linear-gradient(145deg, rgba(108,99,255,0.8) 0%, rgba(147,129,255,0.8) 100%);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(108, 99, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-box::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
+            opacity: 0.5;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        /* Players list */
+        .players-section {
+            margin-top: 25px;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: "";
+            display: inline-block;
+            width: 5px;
+            height: 18px;
+            background-color: var(--primary);
+            border-radius: 3px;
+        }
+
+        .players-list {
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .player-item {
+            padding: 8px 10px;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+            border-radius: 4px;
+        }
+
+        .player-item:last-child {
+            border-bottom: none;
+        }
+
+        .your-entry {
+            background-color: rgba(108, 99, 255, 0.1);
+            border-left: 3px solid var(--primary);
+        }
+
+        /* Admin section */
+        .admin-section {
+            margin-top: 20px;
+            border-top: 1px dashed #ddd;
+            padding-top: 20px;
+        }
+
+        .admin-badge {
+            display: inline-block;
+            background-color: var(--accent);
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        /* Footer */
+        .app-footer {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #777;
+        }
+
+        /* Make it responsive */
+        @media (max-width: 600px) {
+            .stats-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .lottery-card {
+                padding: 15px;
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo">Crypto<span>Lottery</span></div>
+            <p class="tagline">Welcome to COMP4541 Lottery :)</p>
+        </header>
+        
+        <main class="lottery-card">
+            <div class="info-box">
+                <p><strong>Description:</strong> Enter the lottery by sending 0.001 ETH. When the owner picks a winner, all the ETH in the pool goes to one lucky player</p>
+            </div>
+            
+            <div id="connection-status" class="status warning">
+                Connect your wallet to join the fun!
+            </div>
+            
+            <button id="connect-wallet" class="btn btn-primary">
+                <span class="icon wallet-icon"></span>
+                Connect Wallet
+            </button>
+            
+            <div class="stats-container">
+                <div class="stat-box">
+                    <div class="stat-label">PRIZE POOL</div>
+                    <div id="prize-pool" class="stat-value">0 ETH</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">PLAYERS</div>
+                    <div id="player-count" class="stat-value">0</div>
+                </div>
+            </div>
+            
+            <button id="enter-lottery" class="btn btn-primary" disabled>
+                <span class="icon enter-icon"></span>
+                Enter Lottery (0.001 ETH)
+            </button>
+            
+            <div id="admin-section" class="admin-section" style="display: none;">
+                <h3 class="section-title">Admin Controls <span class="admin-badge">Contract Owner</span></h3>
+                <button id="pick-winner" class="btn btn-secondary">
+                    <span class="icon winner-icon"></span>
+                    Draw Winner
+                </button>
+            </div>
+            
+            <div class="players-section">
+                <h3 class="section-title">Current Players</h3>
+                <div id="players-list" class="players-list">
+                    <p>No players yet. Be the first to enter!</p>
+                </div>
+            </div>
+            
+            <div id="status-message"></div>
+        </main>
+        
+        <footer class="app-footer">
+            <p> COMP4541 2024-25 Spring</p>
+        </footer>
+    </div>
+
+    <script>
+        // Contract details - REPLACE WITH YOUR CONTRACT ADDRESS
+        const CONTRACT_ADDRESS = '0x1339ab6B2C02f826327CCECC7D2384F628d2B230'; 
+        const CONTRACT_ABI = [
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_studentId",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "player",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "LotteryEntered",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "winner",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "prize",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "WinnerPicked",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "enter",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getPlayers",
+                "outputs": [
+                    {
+                        "internalType": "address[]",
+                        "name": "",
+                        "type": "address[]"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "owner",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "pickWinner",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "players",
+                "outputs": [
+                    {
+                        "internalType": "address",
+                        "name": "",
+                        "type": "address"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "studentId",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        // App variables
+        let provider, signer, contract;
+        let userAddress = null;
+        
+        // DOM elements
+        const connectWalletBtn = document.getElementById('connect-wallet');
+        const enterLotteryBtn = document.getElementById('enter-lottery');
+        const pickWinnerBtn = document.getElementById('pick-winner');
+        const connectionStatus = document.getElementById('connection-status');
+        const playersList = document.getElementById('players-list');
+        const adminSection = document.getElementById('admin-section');
+        const prizePool = document.getElementById('prize-pool');
+        const playerCount = document.getElementById('player-count');
+        const statusMessage = document.getElementById('status-message');
+        
+        // Connect to MetaMask
+        async function connectWallet() {
+            try {
+                if (window.ethereum) {
+                    // Create a vanilla provider without network specifics to avoid ENS errors
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    
+                    // Request account access
+                    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    userAddress = accounts[0];
+                    
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                    
+                    // Update UI
+                    connectionStatus.className = 'status success';
+                    connectionStatus.textContent = 'Connected: ' + 
+                        userAddress.substring(0, 6) + '...' + 
+                        userAddress.substring(38);
+                    enterLotteryBtn.disabled = false;
+                    connectWalletBtn.disabled = true;
+                    
+                    // Check if user is owner
+                    try {
+                        const owner = await contract.owner();
+                        if (owner.toLowerCase() === userAddress.toLowerCase()) {
+                            adminSection.style.display = 'block';
+                        }
+                    } catch (error) {
+                        console.error("Error checking owner:", error);
+                        showStatus('Connected but could not verify ownership.', 'warning');
+                    }
+                    
+                    // Listen for account/network changes
+                    window.ethereum.on('accountsChanged', function () {
+                        window.location.reload();
+                    });
+                    
+                    window.ethereum.on('chainChanged', function () {
+                        window.location.reload();
+                    });
+                    
+                    // Update lottery data & setup events
+                    await updateLotteryInfo();
+                    setupEventListeners();
+                    
+                    return true;
+                } else {
+                    showStatus('Please install MetaMask to use this app!', 'error');
+                    return false;
+                }
+            } catch (error) {
+                console.error(error);
+                showStatus('Failed to connect: ' + error.message, 'error');
+                return false;
+            }
+        }
+        
+        // Update lottery information
+        async function updateLotteryInfo() {
+            try {
+                // Check if contract exists on this network
+                try {
+                    const code = await provider.getCode(CONTRACT_ADDRESS);
+                    if (code === '0x') {
+                        showStatus('Contract not found on this network. Please switch to Sepolia testnet.', 'error');
+                        return;
+                    }
+                } catch (error) {
+                    showStatus('Error connecting to contract. Please check your network.', 'error');
+                    return;
+                }
+                
+                // Get current players
+                try {
+                    const players = await contract.getPlayers();
+                    updatePlayersList(players);
+                    
+                    // Update player count
+                    playerCount.textContent = players.length;
+                } catch (error) {
+                    console.error("Error getting players:", error);
+                    showStatus('Unable to retrieve players list.', 'warning');
+                }
+                
+                // Get current balance (prize pool)
+                try {
+                    const balance = await provider.getBalance(CONTRACT_ADDRESS);
+                    prizePool.textContent = ethers.utils.formatEther(balance) + ' ETH';
+                } catch (error) {
+                    console.error("Error getting balance:", error);
+                    showStatus('Unable to retrieve prize pool amount.', 'warning');
+                }
+            } catch (error) {
+                console.error('Error updating lottery info:', error);
+                showStatus('Error refreshing lottery data.', 'error');
+            }
+        }
+        
+        // Update the players list display
+        function updatePlayersList(players) {
+            if (players.length === 0) {
+                playersList.innerHTML = '<p>No players yet. Be the first to enter!</p>';
+                return;
+            }
+            
+            playersList.innerHTML = '';
+            players.forEach(player => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'player-item';
+                
+                // Highlight if current user
+                if (player.toLowerCase() === userAddress?.toLowerCase()) {
+                    playerElement.className += ' your-entry';
+                    playerElement.textContent = `${player} (You)`;
+                } else {
+                    playerElement.textContent = player;
+                }
+                
+                playersList.appendChild(playerElement);
+            });
+        }
+        
+        // Enter the lottery
+        async function enterLottery() {
+            try {
+                enterLotteryBtn.disabled = true;
+                showStatus('Entering lottery...', 'warning');
+                
+                // Check if already entered
+                try {
+                    const players = await contract.getPlayers();
+                    const alreadyEntered = players.some(
+                        player => player.toLowerCase() === userAddress.toLowerCase()
+                    );
+                    
+                    if (alreadyEntered) {
+                        showStatus('You are already in this lottery!', 'warning');
+                        enterLotteryBtn.disabled = false;
+                        return;
+                    }
+                } catch (error) {
+                    console.error("Error checking if already entered:", error);
+                    // Continue anyway since this is just a check
+                }
+                
+                // Send transaction
+                try {
+                    const tx = await contract.enter({
+                        value: ethers.utils.parseEther('0.001')
+                    });
+                    
+                    showStatus('Transaction sent! Waiting for confirmation...', 'warning');
+                    
+                    // Wait for confirmation
+                    const receipt = await tx.wait();
+                    
+                    if (receipt.status === 1) {
+                        showStatus('You have entered the lottery! Good luck! 🍀', 'success');
+                    } else {
+                        showStatus('Transaction failed. Please try again.', 'error');
+                    }
+                } catch (error) {
+                    console.error("Transaction error:", error);
+                    showStatus('Transaction failed: ' + (error.reason || error.message), 'error');
+                }
+                
+                await updateLotteryInfo();
+            } catch (error) {
+                console.error('Error entering lottery:', error);
+                showStatus('Failed to enter: ' + error.message, 'error');
+            } finally {
+                enterLotteryBtn.disabled = false;
+            }
+        }
+        
+        // Pick a winner (admin only)
+        async function pickWinner() {
+            try {
+                pickWinnerBtn.disabled = true;
+                showStatus('Picking a winner...', 'warning');
+                
+                // Check if there are players
+                try {
+                    const players = await contract.getPlayers();
+                    if (players.length === 0) {
+                        showStatus('No players in the lottery!', 'error');
+                        pickWinnerBtn.disabled = false;
+                        return;
+                    }
+                } catch (error) {
+                    console.error("Error checking players:", error);
+                    showStatus('Error checking players. Try again.', 'error');
+                    pickWinnerBtn.disabled = false;
+                    return;
+                }
+                
+                // Send transaction
+                try {
+                    const tx = await contract.pickWinner();
+                    
+                    showStatus('Transaction sent! Waiting for confirmation...', 'warning');
+                    
+                    // Wait for confirmation
+                    const receipt = await tx.wait();
+                    
+                    if (receipt.status === 1) {
+                        showStatus('Winner has been picked! Check your wallet for winnings. 🎉', 'success');
+                    } else {
+                        showStatus('Transaction failed. Please try again.', 'error');
+                    }
+                } catch (error) {
+                    console.error("Transaction error:", error);
+                    showStatus('Transaction failed: ' + (error.reason || error.message), 'error');
+                }
+                
+                await updateLotteryInfo();
+            } catch (error) {
+                console.error('Error picking winner:', error);
+                showStatus('Failed to pick winner: ' + error.message, 'error');
+            } finally {
+                pickWinnerBtn.disabled = false;
+            }
+        }
+        
+        // Show status messages
+        function showStatus(message, type) {
+            statusMessage.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            // Clear success/error messages after 5 seconds
+            if (type === 'success' || type === 'error') {
+                setTimeout(() => {
+                    statusMessage.innerHTML = '';
+                }, 5000);
+            }
+        }
+        
+        // Setup event listeners for contract events
+        function setupEventListeners() {
+            try {
+                // Clear any existing listeners
+                contract.removeAllListeners();
+
+                // Listen for new players
+                contract.on("LotteryEntered", (player, amount) => {
+                    updateLotteryInfo();
+                    if (player.toLowerCase() !== userAddress.toLowerCase()) {
+                        showStatus(`New player entered the lottery!`, 'success');
+                    }
+                });
+                
+                // Listen for winner picked
+                contract.on("WinnerPicked", (winner, prize) => {
+                    updateLotteryInfo();
+                    const prizeEth = ethers.utils.formatEther(prize);
+                    
+                    if (winner.toLowerCase() === userAddress.toLowerCase()) {
+                        showStatus(`Congratulations! You won ${prizeEth} ETH! 🎉`, 'success');
+                    } else {
+                        showStatus(`Winner has been picked and won ${prizeEth} ETH!`, 'warning');
+                    }
+                });
+            } catch (error) {
+                console.error("Error setting up event listeners:", error);
+            }
+        }
+        
+        // Button click event listeners
+        connectWalletBtn.addEventListener('click', connectWallet);
+        enterLotteryBtn.addEventListener('click', enterLottery);
+        pickWinnerBtn.addEventListener('click', pickWinner);
+        
+        // Check if MetaMask is already connected on page load
+        window.addEventListener('load', async () => {
+            if (window.ethereum) {
+                try {
+                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                    if (accounts.length > 0) {
+                        await connectWallet();
+                    }
+                } catch (error) {
+                    console.error(error);
+                }
+            } else {
+                showStatus('MetaMask not detected. Please install it to use this app.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
